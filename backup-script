@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+#what to backup
+#backup_files="/home /var/spool/mail /etc /root /boot /opt"
+backup_files="/etc"
+
+
+#where to bakup to
+dest="/mnt/backup"
+log_file="$dest/backup.log"
+
+#create archive filename
+day=$(date +%A)
+day_date=$(date +%d)
+month=$(date +%b)
+time=$(date +%H-%M-%S)
+hostname=$(hostname -s)
+archive_file="$hostname-$day-$day_date-$month-$time.tgz"
+
+#check if remote location id mounted
+if ! mountpoint -q /mnt/backup; then
+    echo "Backup destination not mounted, exiting"
+    exit 1
+fi
+
+
+#find and delete backups older than 3 dyas
+find /mnt/backup -name "*.tgz" -mtime +2 -delete
+
+#print start status message
+echo "--------------------------------------------------------------" >> $log_file
+echo "Backing up $backup_files to $dest/$archive_file" >> $log_file
+date >> $log_file
+echo >> $log_file
+
+#backup the files using tar
+tar czf $dest/$archive_file $backup_files &>> $log_file
+
+#print end status message
+if [[ $? -eq 0 ]]; then
+  echo >> $log_file
+  echo "Backup finished" >> $log_file
+else
+  echo >> $log_file
+  echo "Backup FAILED" >> $log_file
+fi
+date >> $log_file
+echo >> $log_file
+
+#long listing of files in $dest to check files sizes.
+ls -lh $dest
